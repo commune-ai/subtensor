@@ -4,9 +4,14 @@ services:
   node-subtensor:
     container_name: node-subtensor
     image: opentensorfdn/subtensor:latest
-    cpu_count: 2
-    mem_limit: 4000000000
-    memswap_limit: 8000000000
+    cpu_count: 4
+    mem_limit: 10000000000
+    memswap_limit: 20000000000
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
     ports:
       - "9944:9944"
       - "30333:30333"
@@ -17,5 +22,5 @@ services:
       - "9933"
     environment:
       - CARGO_HOME=/var/www/node-subtensor/.cargo
-    command: bash -c "/usr/local/bin/node-subtensor --base-path /root/.local/share/node-subtensor/ --chain /subtensor/specs/nakamotoSpecRaw.json --rpc-external --ws-external --rpc-cors all --no-mdns --ws-max-connections 10000 --in-peers 500 --out-peers 500"
+    command: bash -c "/usr/local/bin/node-subtensor --base-path /root/.local/share/node-subtensor/ --chain /subtensor/specs/nakamotoSpecRaw.json --rpc-external --ws-external --rpc-cors all --no-mdns --ws-max-connections 10000 --in-peers 500 --out-peers 500 --ws-max-out-buffer-capacity 1024 --rpc-max-payload 1000"
 

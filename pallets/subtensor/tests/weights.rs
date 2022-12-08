@@ -121,6 +121,34 @@ fn test_weights_err_has_duplicate_ids() {
 }
 
 #[test]
+fn test_weights_err_max_weight_limit() {
+	new_test_ext().execute_with(|| {
+		let _neuron = register_ok_neuron( 0, 0);
+		run_to_block( 2 );
+    	let _neuron = register_ok_neuron( 1, 1);
+		run_to_block( 3 );
+		let _neuron = register_ok_neuron( 2, 2);
+		run_to_block( 4 );
+    	let _neuron = register_ok_neuron( 3, 3);
+		run_to_block( 5 );
+    	let _neuron = register_ok_neuron( 4, 4);
+
+		Subtensor::set_max_weight_limit(u32::MAX/5); // Set max to u32::MAX/5
+
+		// Non self weight fails.
+		let weights_keys: Vec<u32> = vec![1, 2, 3, 4]; 
+		let weight_values: Vec<u32> = vec![1, 1, 1, 1]; // normalizes to u32::MAX/4
+		let result = Subtensor::set_weights(Origin::signed(0), weights_keys, weight_values);
+		assert_eq!(result, Err(Error::<Test>::MaxWeightExceeded.into()));
+
+		// Self weight is a success.
+		let weights_keys: Vec<u32> = vec![0]; 
+		let weight_values: Vec<u32> = vec![1]; // normalizes to u32::MAX
+		assert_ok!(Subtensor::set_weights(Origin::signed(0), weights_keys, weight_values));
+	});
+}
+
+#[test]
 fn test_no_signature() {
 	new_test_ext().execute_with(|| {
 		let weights_keys: Vec<u32> = vec![];
@@ -182,39 +210,6 @@ fn test_set_weight_not_enough_values() {
 		let weight_values : Vec<u32> = vec![10, 10]; // random value.
 		Subtensor::set_min_allowed_weights(1);
 		assert_ok!( Subtensor::set_weights(Origin::signed(1), weight_keys, weight_values)) ;
-	});
-}
-
-#[test]
-fn test_set_weight_max_min_ratio_to_high() {
-	new_test_ext().execute_with(|| {
-
-        let _neuron = register_ok_neuron(1, 11);
-		let _neuron = register_ok_neuron(2, 22);
-
-		// max allowed ratio is ok.
-		let weight_keys : Vec<u32> = vec![0, 1];
-		let weight_values : Vec<u32> = vec![10, 40];		
-		assert_ok!( Subtensor::set_weights(Origin::signed(1), weight_keys, weight_values)) ;
-		
-		// Ratio is to high.
-		let weight_keys : Vec<u32> = vec![0, 1];
-		let weight_values : Vec<u32> = vec![10, 40];		
-		Subtensor::set_max_allowed_max_min_ratio(2);
-		let result = Subtensor::set_weights(Origin::signed(1), weight_keys, weight_values);
-		assert_eq!(result, Err(Error::<Test>::MaxAllowedMaxMinRatioExceeded.into()));
-
-		// Meet ratio.
-		let weight_keys : Vec<u32> = vec![0, 1];
-		let weight_values : Vec<u32> = vec![10, 20];		
-		assert_ok!( Subtensor::set_weights(Origin::signed(1), weight_keys, weight_values)) ;
-
-		// Ratio limit is lowered
-		let weight_keys : Vec<u32> = vec![0, 1];
-		let weight_values : Vec<u32> = vec![10, 40];		
-		Subtensor::set_max_allowed_max_min_ratio(4);
-		assert_ok!( Subtensor::set_weights(Origin::signed(1), weight_keys, weight_values) );
-
 	});
 }
 

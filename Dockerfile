@@ -6,7 +6,7 @@
 # $ docker build -t subtensor . --platform linux/x86_64 --build-arg SNAPSHOT_DIR="DIR_NAME" --build-arg SNAPSHOT_FILE="FILENAME.TAR.GZ"  -f subtensor/Dockerfile
 
 
-FROM ubuntu:20.04
+FROM ubuntu:22.10
 SHELL ["/bin/bash", "-c"]
 
 # metadata
@@ -32,9 +32,9 @@ ENV RUST_BACKTRACE 1
 # install tools and dependencies
 RUN apt-get update && \
         DEBIAN_FRONTEND=noninteractive apt-get install -y \
-                libssl1.1 \
                 ca-certificates \
-                curl && \
+                curl \
+		clang && \
 # apt cleanup
         apt-get autoremove -y && \
         apt-get clean && \
@@ -49,12 +49,12 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN mkdir -p subtensor/scripts
 RUN mkdir -p subtensor/specs
 
-COPY subtensorv2/scripts/init.sh subtensor/scripts/init.sh
-COPY subtensorv2/specs/nakamotoChainSpecRaw.json subtensor/specs/nakamotoSpecRaw.json
+COPY subtensor/scripts/init.sh subtensor/scripts/init.sh
+COPY subtensor/specs/nakamotoChainSpecRaw.json subtensor/specs/nakamotoSpecRaw.json
 
 RUN subtensor/scripts/init.sh
 
-COPY ./subtensorv2/target/release/node-subtensor /usr/local/bin
+COPY ./subtensor/target/release/node-subtensor /usr/local/bin
 
 RUN /usr/local/bin/node-subtensor --version
 

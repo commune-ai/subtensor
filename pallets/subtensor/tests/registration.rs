@@ -225,8 +225,9 @@ fn test_immunity_period() {
 		assert!( Subtensor::will_be_prunned(1) );
 
 		// Step to the next block.
-		Subtensor::set_stake_from_vector( vec![ 1, 0 ] );
-		assert_eq!( Subtensor::get_stake(), vec![ 1, 0 ] );
+		// Add stake to Subtensor::::get_stake_pruning_min()
+		Subtensor::set_stake_from_vector( vec![ Subtensor::get_stake_pruning_min(), 0 ] );
+		assert_eq!( Subtensor::get_stake(), vec![ Subtensor::get_stake_pruning_min(), 0 ] );
 		step_block ( 1 );
 
 		// Register the next neuron, the previous neurons have immunity however the first has stake.
@@ -240,7 +241,7 @@ fn test_immunity_period() {
 		assert!( Subtensor::will_be_prunned(0) );
 		assert!( Subtensor::will_be_prunned(1) );
 
-		Subtensor::set_stake_from_vector( vec![ 1, 0 ] );
+		Subtensor::set_stake_from_vector( vec![ Subtensor::get_stake_pruning_min(), 0 ] );
 		step_block ( 1 );
 		step_block ( 1 );
 		step_block ( 1 );
@@ -268,7 +269,7 @@ fn test_immunity_period() {
 		step_block ( 1 );
 
 		// Set stake of neuron7 to 2.
-		Subtensor::set_stake_from_vector( vec![ 1, 2 ] );
+		Subtensor::set_stake_from_vector( vec![ Subtensor::get_stake_pruning_min(), Subtensor::get_stake_pruning_min() * 2 ] );
 
 		// Register another this time going into slot 0.
 		let neuron8 = register_ok_neuron_with_nonce( 8, 8 , 123213124234);
@@ -278,9 +279,9 @@ fn test_immunity_period() {
 
 		// Check that the stake in slot 0 has decremented.
 		// Note that the stake has been decremented.
-		assert_eq!( Subtensor::get_stake(), vec![0, 2 ] );
-		assert_eq!( Subtensor::get_total_stake(), 2 ); // Total stake has been decremented.
-		assert_eq!(Subtensor::get_coldkey_balance( &5 ), 1); // The unstaked funds have been added to the neuron 5 coldkey account.
+		assert_eq!( Subtensor::get_stake(), vec![0, Subtensor::get_stake_pruning_min() * 2 ] );
+		assert_eq!( Subtensor::get_total_stake(), Subtensor::get_stake_pruning_min() * 2 ); // Total stake has been decremented.
+		assert_eq!(Subtensor::get_coldkey_balance( &5 ) as u64, Subtensor::get_stake_pruning_min()); // The unstaked funds have been added to the neuron 5 coldkey account.
 
 		// Step blocks, nobody is immune anymore.
 		step_block ( 1 );
@@ -289,7 +290,7 @@ fn test_immunity_period() {
 		step_block ( 1 );
 
 		// Set weight matrix so that slot 1 has an incentive.
-		Subtensor::set_stake_from_vector( vec![ 2, 1 ] );
+		Subtensor::set_stake_from_vector( vec![ Subtensor::get_stake_pruning_min() * 2, Subtensor::get_stake_pruning_min() * 1 ] );
 		let weights_matrix: Vec<Vec<u32>> = vec! [
             vec! [0, u32::max_value()],
             vec! [0, u32::max_value()]
@@ -302,12 +303,10 @@ fn test_immunity_period() {
 		assert_eq!( Subtensor::get_incentive(), vec![0, u64m] );
 
 		// Register another, this time we are comparing stake proportion to incentive proportion.
-		// Slot 1 has incentive proportion 1, slot0 has stake proportion 2/3. So this goes into slot 0.
+		// Slot 1 has incentive proportion 1, slot0 has stake proportion 2/3. So this goes into slot 1.
 		let neuron9 = register_ok_neuron_with_nonce( 9, 9 , 18203182312);
-		assert_eq!( neuron9.uid, 0 );
-		assert!( Subtensor::will_be_prunned(0) );
-		assert!( !Subtensor::will_be_prunned(1) );
-
+		assert_eq!( neuron9.uid, 1 );
+		assert!( Subtensor::will_be_prunned(1) );
 	});
 }
 

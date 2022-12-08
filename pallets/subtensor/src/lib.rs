@@ -114,6 +114,10 @@ pub mod pallet {
 		#[pallet::constant]
 		type InitialMaxAllowedMaxMinRatio: Get<u64>;
 
+		/// Initial max weight limit.
+		#[pallet::constant]
+		type InitialMaxWeightLimit: Get<u32>;
+
 		/// Initial stake pruning denominator
 		#[pallet::constant]
 		type InitialStakePruningDenominator: Get<u64>;
@@ -177,6 +181,19 @@ pub mod pallet {
 		/// Initial target registrations per interval.
 		#[pallet::constant]
 		type InitialTargetRegistrationsPerInterval: Get<u64>;
+
+		///// u8 where value (x) represents x * 10^-2
+		/// Initial scaling law power.
+		#[pallet::constant]
+		type InitialScalingLawPower: Get<u8>;
+
+		/// Initial synergy scaling law power.
+		#[pallet::constant]
+		type InitialSynergyScalingLawPower: Get<u8>;
+
+		/// Initial validator exclude quantile.
+		#[pallet::constant]
+		type InitialValidatorExcludeQuantile: Get<u8>;
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -419,6 +436,16 @@ pub mod pallet {
 	>;
 
 	#[pallet::type_value] 
+	pub fn DefaultMaxWeightLimit<T: Config>() -> u32 { T::InitialMaxWeightLimit::get() }
+	#[pallet::storage]
+	pub type MaxWeightLimit<T> = StorageValue<
+		_, 
+		u32, 
+		ValueQuery,
+		DefaultMaxWeightLimit<T>
+	>;
+
+	#[pallet::type_value] 
 	pub fn DefaultImmunityPeriod<T: Config>() -> u64 { T::InitialImmunityPeriod::get() }
 	#[pallet::storage]
 	pub type ImmunityPeriod<T> = StorageValue<
@@ -526,6 +553,36 @@ pub mod pallet {
 		u64, 
 		ValueQuery,
 		DefaultFoundationDistribution<T>
+	>;
+
+	#[pallet::type_value] 
+	pub fn DefaultScalingLawPower<T: Config>() -> u8 { T::InitialScalingLawPower::get() }
+	#[pallet::storage]
+	pub type ScalingLawPower<T> = StorageValue<
+		_, 
+		u8, 
+		ValueQuery,
+		DefaultScalingLawPower<T>
+	>;
+
+	#[pallet::type_value] 
+	pub fn DefaultSynergyScalingLawPower<T: Config>() -> u8{ T::InitialSynergyScalingLawPower::get() }
+	#[pallet::storage]
+	pub type SynergyScalingLawPower<T> = StorageValue<
+		_, 
+		u8, 
+		ValueQuery,
+		DefaultSynergyScalingLawPower<T>
+	>;
+
+	#[pallet::type_value] 
+	pub fn DefaultValidatorExcludeQuantile<T: Config>() -> u8 { T::InitialValidatorExcludeQuantile::get() }
+	#[pallet::storage]
+	pub type ValidatorExcludeQuantile<T> = StorageValue<
+		_, 
+		u8, 
+		ValueQuery,
+		DefaultValidatorExcludeQuantile<T>
 	>;
 
 	/// #[pallet::type_value] 
@@ -729,6 +786,9 @@ pub mod pallet {
 		/// --- Event created when the max allowed max min ration has been set.
 		MaxAllowedMaxMinRatioSet( u64 ),
 
+		/// --- Event created when the max weight limit has been set.
+		MaxWeightLimitSet( u32 ),
+
 		/// --- Event created when the incentive pruning denominator has been set.
 		IncentivePruningDenominatorSet( u64 ),
 
@@ -743,6 +803,15 @@ pub mod pallet {
 
 		/// --- Event created when the foundation distribution has been set.
 		FoundationDistributionSet( u64 ),
+
+		/// --- Event created when the scaling law power has been set.
+		ScalingLawPowerSet( u8 ),
+
+		/// --- Event created when the synergy scaling law power has been set.
+		SynergyScalingLawPowerSet( u8 ),
+
+		/// --- Event created when the validator exclude quantile has been set.
+		ValidatorExcludeQuantileSet( u8 ),
 
 		/// --- Event created when the validator default epoch length has been set.
 		ValidatorEpochLenSet(u64),
@@ -842,8 +911,15 @@ pub mod pallet {
 		/// max value is more than MaxAllowedMaxMinRatio.
 		MaxAllowedMaxMinRatioExceeded,
 
+		/// ---- Thrown when the dispatch attempts to set weights on chain with where any normalized
+		/// weight is more than MaxWeightLimit.
+		MaxWeightExceeded,
+
 		/// ---- Thrown when the caller attempts to use a repeated work.
 		WorkRepeated,
+
+		/// ---- Thrown when the caller attempts to set a storage value outside of its allowed range.
+		StorageValueOutOfRange,
 	}
 
 	impl<T: Config> Printable for Error<T> {
@@ -853,6 +929,7 @@ pub mod pallet {
                 Error::NotRegistered  => "The node with the supplied public key is not registered".print(),
                 Error::WeightVecNotEqualSize => "The vec of keys and the vec of values are not of the same size".print(),
                 Error::NonAssociatedColdKey => "The used cold key is not associated with the hot key acccount".print(),
+				Error::StorageValueOutOfRange => "The supplied storage value is outside of its allowed range".print(),
                 _ => "Invalid Error Case".print(),
             }
         }
@@ -1243,6 +1320,17 @@ pub mod pallet {
 		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_max_weight_limit ( 
+			origin:OriginFor<T>, 
+			max_weight_limit: u32 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			MaxWeightLimit::<T>::set( max_weight_limit );
+			Self::deposit_event( Event::MaxWeightLimitSet( max_weight_limit ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_validator_batch_size ( 
 			origin:OriginFor<T>, 
 			validator_batch_size: u64 
@@ -1337,6 +1425,42 @@ pub mod pallet {
 			ensure_root( origin )?;
 			Self::reset_bonds();
 			Self::deposit_event( Event::ResetBonds() );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_scaling_law_power( 
+			origin:OriginFor<T>, 
+			scaling_law_power: u8 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			ensure!( scaling_law_power <= 100, Error::<T>::StorageValueOutOfRange  ); // The power must be between 0 and 100 => 0% and 100%
+			ScalingLawPower::<T>::set( scaling_law_power );
+			Self::deposit_event( Event::ScalingLawPowerSet( scaling_law_power ));
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_synergy_scaling_law_power( 
+			origin:OriginFor<T>, 
+			synergy_scaling_law_power: u8 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			ensure!( synergy_scaling_law_power <= 100, Error::<T>::StorageValueOutOfRange ); // The power must be between 0 and 100 => 0% and 100%
+		    SynergyScalingLawPower::<T>::set( synergy_scaling_law_power );
+			Self::deposit_event( Event::SynergyScalingLawPowerSet( synergy_scaling_law_power ));
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_validator_exclude_quantile( 
+			origin:OriginFor<T>, 
+			validator_exclude_quantile: u8 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			ensure!( validator_exclude_quantile <= 100, Error::<T>::StorageValueOutOfRange ); // The quantile must be between 0 and 100 => 0% and 100%
+		    ValidatorExcludeQuantile::<T>::set( validator_exclude_quantile );
+			Self::deposit_event( Event::ValidatorExcludeQuantileSet( validator_exclude_quantile ));
 			Ok(())
 		}
 	}
@@ -1468,6 +1592,28 @@ pub mod pallet {
 		pub fn set_validator_epochs_per_reset( validator_epochs_per_reset: u64 ) {
 			ValidatorEpochsPerReset::<T>::put( validator_epochs_per_reset );
 		}
+
+		pub fn get_scaling_law_power( ) -> u8 {
+			return ScalingLawPower::<T>::get();
+		}
+		pub fn set_scaling_law_power( scaling_law_power: u8 ) {
+			ScalingLawPower::<T>::put( scaling_law_power );
+		}
+
+		pub fn get_synergy_scaling_law_power( ) -> u8 {
+			return SynergyScalingLawPower::<T>::get();
+		}
+		pub fn set_synergy_scaling_law_power( synergy_scaling_law_power: u8 ) {
+			SynergyScalingLawPower::<T>::put( synergy_scaling_law_power );
+		}
+
+		pub fn get_validator_exclude_quantile( ) -> u8 {
+			return ValidatorExcludeQuantile::<T>::get();
+		}
+		pub fn set_validator_exclude_quantile( validator_exclude_quantile: u8 ) {
+			ValidatorExcludeQuantile::<T>::put( validator_exclude_quantile );
+		}
+
 		// -- Get step consensus shift (1/kappa)
 		pub fn get_kappa( ) -> u64 {
 			return Kappa::<T>::get();
@@ -1499,6 +1645,12 @@ pub mod pallet {
 		}
 		pub fn set_max_allowed_max_min_ratio( max_allowed_max_min_ratio: u64 ) {
 			MaxAllowedMaxMinRatio::<T>::put( max_allowed_max_min_ratio );
+		}
+		pub fn get_max_weight_limit( ) -> u32 {
+			return MaxWeightLimit::<T>::get();
+		}
+		pub fn set_max_weight_limit( max_weight_limit: u32 ) {
+			MaxWeightLimit::<T>::put( max_weight_limit );
 		}
 		pub fn get_immunity_period( ) -> u64 {
 			return ImmunityPeriod::<T>::get();

@@ -71,30 +71,19 @@ impl<T: Config> Pallet<T> {
             let mut min_prunning_score: I65F63 = I65F63::from_num( u64::MAX ); // Start min score as max.
             for ( uid_i, neuron_i ) in <Neurons<T> as IterableStorageMap<u32, NeuronMetadataOf<T>>>::iter() {
 
-                // Compute the neuron prunning score.
-                // The prunning score is given by max( stake_proportion, incentive_proportion )
-                // This allows users to buy their way into the network by holding more stake than 
-                // the min incentive proportion. 
-                // Calculate stake proportion with zero check.        
-                let mut stake_proportion: I65F63;
-                if Self::get_total_stake() == 0 || neuron_i.stake <= Self::get_stake_pruning_min() {
-                    stake_proportion = I65F63::from_num( u64::min_value() );
+                // If a neuron has more than stake_pruning_min they are ranked based on stake
+                // otherwise we prune based on incentive.
+                let mut prunning_score: I65F63;
+                if neuron_i.stake >= Self::get_stake_pruning_min() {
+                    if Self::get_total_stake() > 0 { // in case stake pruning min == 0
+                        prunning_score = I65F63::from_num( neuron_i.stake ) / I65F63::from_num( Self::get_total_stake() );
+                    } else {
+                        prunning_score = I65F63::from_num( 0 );
+                    }
                 } else {
-                    stake_proportion = I65F63::from_num( neuron_i.stake ) / I65F63::from_num( Self::get_total_stake() ); // Stake proportion (0, 1)
+                    prunning_score = I65F63::from_num( neuron_i.incentive ) / I65F63::from_num( u64::MAX );
                 }
-                let mut incentive_proportion: I65F63 = I65F63::from_num( neuron_i.incentive ) / I65F63::from_num( u64::MAX ); // Incentive proportion (0, 1)
-
-                // Multiply through proportions, this is how we weight between different components.
-                stake_proportion = stake_proportion * I65F63::from_num( 1 ) / I65F63::from_num( Self::get_stake_pruning_denominator() );
-                incentive_proportion = incentive_proportion * I65F63::from_num( 1 ) / I65F63::from_num( Self::get_incentive_pruning_denominator() );
-
-                // Take max(stake_proportion, incentive_proportion).
-                let mut prunning_score;
-                if incentive_proportion > stake_proportion {
-                    prunning_score = incentive_proportion;
-                } else {
-                    prunning_score = stake_proportion;
-                }
+                
                 // Neurons that have registered within an immunity period should not be counted in this pruning
                 // unless there are no other peers to prune. This allows new neurons the ability to gain incentive before they are cut. 
                 // We use block_at_registration which sets the prunning score above any possible value for stake or incentive.
@@ -102,8 +91,9 @@ impl<T: Config> Pallet<T> {
                 let block_at_registration = BlockAtRegistration::<T>::get( uid_i );  // Default value is 0.
                 if current_block - block_at_registration < immunity_period { // Check for immunity.
                     // Note that adding block_at_registration to the pruning score give peers who have registered later a better score.
-                    prunning_score = prunning_score + I65F63::from_num( block_at_registration ); // Prunning score now on range (0, current_block)
+                    prunning_score = prunning_score + I65F63::from_num( block_at_registration + 1 ); // Prunning score now on range (0, current_block)
                 } 
+
                 // Find the min purnning score. We will remove this peer first. 
                 if prunning_score < min_prunning_score {
                     // Update the min

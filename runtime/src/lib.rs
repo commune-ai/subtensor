@@ -98,7 +98,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	//   `spec_version`, and `authoring_version` are the same between Wasm and native.
 	// This value is set to 100 to notify Polkadot-JS App (https://polkadot.js.org/apps) to use
 	//   the compatible custom types.
-	spec_version: 109,
+	spec_version: 111,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -275,11 +275,18 @@ parameter_types! {
 	pub const InitialValidatorSequenceLen: u64 = 10;
 	pub const InitialValidatorEpochLen: u64 = 1000;
 	pub const InitialValidatorEpochsPerReset: u64 = 10;
+	
+	// u8 where value (x) represents x * 10^-2
+	pub const InitialScalingLawPower: u8 = 50; // 0.5
+	pub const InitialSynergyScalingLawPower: u8 = 60; // 0.6
+	pub const InitialValidatorExcludeQuantile: u8 = 10; // 0.1
+
 	pub const InitialImmunityPeriod: u64 = 200;
 	pub const InitialBlocksPerStep: u64 = 100;
 	pub const InitialMaxAllowedUids: u64 = 2000;
 	pub const InitialMinAllowedWeights: u64 = 1;
 	pub const InitialMaxAllowedMaxMinRatio: u64 = 10;
+	pub const InitialMaxWeightLimit: u32 = u32::MAX;
 	pub const InitialIssuance: u64 = 548833985028256;
 	pub const InitialBondsMovingAverage: u64 = 900_000;
 	pub const InitialIncentivePruningDenominator: u64 = 1;
@@ -304,6 +311,9 @@ impl pallet_subtensor::Config for Runtime {
 	type InitialRho = InitialRho;
 	type InitialKappa = InitialKappa;
 	type SelfOwnership = SelfOwnership;
+	type InitialScalingLawPower = InitialScalingLawPower;
+	type InitialSynergyScalingLawPower = InitialSynergyScalingLawPower;
+	type InitialValidatorExcludeQuantile = InitialValidatorExcludeQuantile;
 	type InitialValidatorBatchSize = InitialValidatorBatchSize;
 	type InitialValidatorSequenceLen = InitialValidatorSequenceLen;
 	type InitialValidatorEpochLen = InitialValidatorEpochLen;
@@ -313,6 +323,7 @@ impl pallet_subtensor::Config for Runtime {
 	type InitialMinAllowedWeights = InitialMinAllowedWeights;
 	type InitialBondsMovingAverage = InitialBondsMovingAverage;
 	type InitialMaxAllowedMaxMinRatio = InitialMaxAllowedMaxMinRatio;
+	type InitialMaxWeightLimit = InitialMaxWeightLimit;
 	type InitialStakePruningDenominator = InitialStakePruningDenominator;
 	type InitialStakePruningMin = InitialStakePruningMin;
 	type InitialIncentivePruningDenominator = InitialIncentivePruningDenominator;

@@ -87,7 +87,7 @@ parameter_types! {
 	pub const InitialBondsMovingAverage: u64 = 500_000;
 	pub const InitialIncentivePruningDenominator: u64 = 1;
 	pub const InitialStakePruningDenominator: u64 = 1;
-	pub const InitialStakePruningMin: u64 = 0;
+	pub const InitialStakePruningMin: u64 = 1024;
 	pub const InitialFoundationDistribution: u64 = 0;
 
 	pub const InitialValidatorBatchSize: u64 = 10;
@@ -97,6 +97,7 @@ parameter_types! {
 
 	pub const InitialMinAllowedWeights: u64 = 0;
 	pub const InitialMaxAllowedMaxMinRatio: u64 = 0;
+	pub const InitialMaxWeightLimit: u32 = u32::MAX;
 	pub const InitialBlocksPerStep: u64 = 1;
 	pub const InitialIssuance: u64 = 548833985028256;
 	pub const InitialDifficulty: u64 = 10000;
@@ -106,6 +107,10 @@ parameter_types! {
 	pub const InitialAdjustmentInterval: u64 = 100;
 	pub const InitialMaxRegistrationsPerBlock: u64 = 2;
 	pub const InitialTargetRegistrationsPerInterval: u64 = 2;
+
+	pub const InitialScalingLawPower: u8 = 50;
+	pub const InitialSynergyScalingLawPower: u8 = 60;
+	pub const InitialValidatorExcludeQuantile: u8 = 10;
 }
 
 thread_local!{
@@ -193,12 +198,17 @@ impl pallet_subtensor::Config for Test {
 	type InitialValidatorSequenceLen = InitialValidatorSequenceLen;
 	type InitialValidatorEpochLen = InitialValidatorEpochLen;
 	type InitialValidatorEpochsPerReset = InitialValidatorEpochsPerReset;
+	
+	type InitialScalingLawPower = InitialScalingLawPower;
+	type InitialSynergyScalingLawPower = InitialSynergyScalingLawPower;
+	type InitialValidatorExcludeQuantile = InitialValidatorExcludeQuantile;
 
 	type InitialImmunityPeriod = InitialImmunityPeriod;
 	type InitialMaxAllowedUids = InitialMaxAllowedUids;
 	type InitialMinAllowedWeights = InitialMinAllowedWeights;
 	type InitialBondsMovingAverage = InitialBondsMovingAverage;
 	type InitialMaxAllowedMaxMinRatio = InitialMaxAllowedMaxMinRatio;
+	type InitialMaxWeightLimit = InitialMaxWeightLimit;
 	type InitialStakePruningDenominator = InitialStakePruningDenominator;
 	type InitialStakePruningMin = InitialStakePruningMin;
 	type InitialIncentivePruningDenominator = InitialIncentivePruningDenominator;
@@ -212,6 +222,7 @@ impl pallet_subtensor::Config for Test {
 	type InitialAdjustmentInterval = InitialAdjustmentInterval;
 	type InitialMaxRegistrationsPerBlock = InitialMaxRegistrationsPerBlock;
 	type InitialTargetRegistrationsPerInterval = InitialTargetRegistrationsPerInterval;
+
 }
 
 impl pallet_sudo::Config for Test {
