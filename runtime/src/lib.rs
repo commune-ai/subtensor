@@ -33,6 +33,59 @@ pub use frame_support::{
 	},
 	StorageValue,
 };
+
+pub use pallet_contracts;
+use pallet_contracts::weights::WeightInfo;
+
+// Contracts price units.
+// Unit = the base number of indivisible units for balances
+const UNIT: Balance = 1_000_000_000_000;
+const MILLIUNIT: Balance = 1_000_000_000;
+const EXISTENTIAL_DEPOSIT: Balance = MILLIUNIT;
+
+const fn deposit(items: u32, bytes: u32) -> Balance {
+ (items as Balance * UNIT + (bytes as Balance) * (5 * MILLIUNIT / 100)) / 10
+}
+
+/// We assume that ~10% of the block weight is consumed by `on_initialize` handlers.
+/// This is used to limit the maximal weight of a single extrinsic.
+const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
+
+
+parameter_types! {
+	/* --snip-- */
+	pub DeletionQueueDepth: u32 = ((DeletionWeightLimit::get() / (
+	 <Runtime as pallet_contracts::Config>::WeightInfo::on_initialize_per_queue_item(1) -
+	 <Runtime as pallet_contracts::Config>::WeightInfo::on_initialize_per_queue_item(0)
+	 )) / 5) as u32;
+	/* --snip-- */
+   }
+
+impl pallet_contracts::Config for Runtime {
+	type Time = Timestamp;
+	type Randomness = RandomnessCollectiveFlip;
+	type Currency = Balances;
+	type RuntimeEvent = RuntimeEvent;
+}
+
+
+use pallet_contracts::migration;
+pub struct Migrations;
+impl OnRuntimeUpgrade for Migrations {
+fn on_runtime_upgrade() -> Weight {
+ migration::migrate::<Runtime>()
+}
+}
+
+pub type Executive = frame_executive::Executive<
+ Runtime,
+ Block,
+ frame_system::ChainContext<Runtime>,
+ Runtime,
+ AllPalletsWithSystem,
+ Migrations,
+>;
+
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::CurrencyAdapter;
@@ -357,6 +410,7 @@ construct_runtime!(
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
 		SubtensorModule: pallet_subtensor,
+		Contracts: pallet_contracts
 	}
 );
 
@@ -418,6 +472,7 @@ impl_runtime_apis! {
 			Executive::initialize_block(header)
 		}
 	}
+
 
 	impl sp_api::Metadata<Block> for Runtime {
 		fn metadata() -> OpaqueMetadata {
@@ -584,6 +639,53 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_subtensor, SubtensorModule);
 
 			Ok(batches)
+		}
+	}
+
+
+	impl pallet_contracts_rpc_runtime_api::ContractsApi<
+		Block, AccountId, Balance, BlockNumber, Hash,
+	>
+		for Runtime
+	{
+		fn call(
+			origin: AccountId,
+			dest: AccountId,
+			value: Balance,
+			gas_limit: u64,
+			storage_deposit_limit: Option<Balance>,
+			input_data: Vec<u8>,
+		) -> pallet_contracts_primitives::ContractExecResult<Balance> {
+			Contracts::bare_call(origin, dest, value, gas_limit, storage_deposit_limit, input_data, true)
+		}
+
+		fn instantiate(
+			origin: AccountId,
+			value: Balance,
+			gas_limit: u64,
+			storage_deposit_limit: Option<Balance>,
+			code: pallet_contracts_primitives::Code<Hash>,
+			data: Vec<u8>,
+			salt: Vec<u8>,
+		) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
+		{
+			Contracts::bare_instantiate(origin, value, gas_limit, storage_deposit_limit, code, data, salt, true)
+		}
+
+		fn upload_code(
+			origin: AccountId,
+			code: Vec<u8>,
+			storage_deposit_limit: Option<Balance>,
+		) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance>
+		{
+			Contracts::bare_upload_code(origin, code, storage_deposit_limit)
+		}
+
+		fn get_storage(
+			address: AccountId,
+			key: [u8; 32],
+		) -> pallet_contracts_primitives::GetStorageResult {
+			Contracts::get_storage(address, key)
 		}
 	}
 }
