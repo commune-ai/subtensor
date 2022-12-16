@@ -1,6 +1,6 @@
 | **Validator Hyperparameter**       | **Value**            |
 |------------------------------------|----------------------|
-| **adjustmentInterval**             | 135                  |
+| **adjustmentInterval**             | 150                  |
 | **blocksPerStep**                  | 100                  |
 | **bondsMovingAverage**             | 900,000              |
 | **immunityPeriod**                 | 4096                 |
@@ -19,5 +19,5 @@
 | **validatorSequenceLength**        | 256                  |
 | **validatorExcludeQuantile**       | 5                    |
 | **scalingLawPower**                | 50                   |
-| **synergyScalingLawPower**         | 60                   |
+| **synergyScalingLawPower**         | 50                   |
 | **MaxWeightLimit**                 | 17_179_868           |
