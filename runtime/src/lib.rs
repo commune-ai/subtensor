@@ -98,7 +98,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	//   `spec_version`, and `authoring_version` are the same between Wasm and native.
 	// This value is set to 100 to notify Polkadot-JS App (https://polkadot.js.org/apps) to use
 	//   the compatible custom types.
-	spec_version: 111,
+	spec_version: 112,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -275,6 +275,8 @@ parameter_types! {
 	pub const InitialValidatorSequenceLen: u64 = 10;
 	pub const InitialValidatorEpochLen: u64 = 1000;
 	pub const InitialValidatorEpochsPerReset: u64 = 10;
+	pub const InitialValidatorPruneLen: u64 = 0;
+	pub const InitialValidatorLogitsDivergence: u64 = 0;
 	
 	// u8 where value (x) represents x * 10^-2
 	pub const InitialScalingLawPower: u8 = 50; // 0.5
@@ -314,6 +316,8 @@ impl pallet_subtensor::Config for Runtime {
 	type InitialScalingLawPower = InitialScalingLawPower;
 	type InitialSynergyScalingLawPower = InitialSynergyScalingLawPower;
 	type InitialValidatorExcludeQuantile = InitialValidatorExcludeQuantile;
+	type InitialValidatorPruneLen = InitialValidatorPruneLen;
+	type InitialValidatorLogitsDivergence = InitialValidatorLogitsDivergence;
 	type InitialValidatorBatchSize = InitialValidatorBatchSize;
 	type InitialValidatorSequenceLen = InitialValidatorSequenceLen;
 	type InitialValidatorEpochLen = InitialValidatorEpochLen;

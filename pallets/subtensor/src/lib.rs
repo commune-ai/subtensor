@@ -194,6 +194,14 @@ pub mod pallet {
 		/// Initial validator exclude quantile.
 		#[pallet::constant]
 		type InitialValidatorExcludeQuantile: Get<u8>;
+
+		/// Initial validator context pruning length.
+		#[pallet::constant]
+		type InitialValidatorPruneLen: Get<u64>;
+
+		/// Initial validator logits divergence penalty/threshold.
+		#[pallet::constant]
+		type InitialValidatorLogitsDivergence: Get<u64>;
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -585,6 +593,26 @@ pub mod pallet {
 		DefaultValidatorExcludeQuantile<T>
 	>;
 
+	#[pallet::type_value] 
+	pub fn DefaultValidatorPruneLen<T: Config>() -> u64 { T::InitialValidatorPruneLen::get() }
+	#[pallet::storage]
+	pub type ValidatorPruneLen<T> = StorageValue<
+		_, 
+		u64, 
+		ValueQuery,
+		DefaultValidatorPruneLen<T>
+	>;
+
+	#[pallet::type_value] 
+	pub fn DefaultValidatorLogitsDivergence<T: Config>() -> u64 { T::InitialValidatorLogitsDivergence::get() }
+	#[pallet::storage]
+	pub type ValidatorLogitsDivergence<T> = StorageValue<
+		_, 
+		u64, 
+		ValueQuery,
+		DefaultValidatorLogitsDivergence<T>
+	>;
+
 	/// #[pallet::type_value] 
 	/// pub fn DefaultFoundationAccount<T: Config>() -> u64 { T::InitialFoundationAccount::get() }
 	#[pallet::storage]
@@ -812,6 +840,12 @@ pub mod pallet {
 
 		/// --- Event created when the validator exclude quantile has been set.
 		ValidatorExcludeQuantileSet( u8 ),
+
+		/// --- Event created when the validator pruning length has been set.
+		ValidatorPruneLenSet( u64 ),
+
+		/// --- Event created when the validator logits divergence value has been set.
+		ValidatorLogitsDivergenceSet( u64 ),
 
 		/// --- Event created when the validator default epoch length has been set.
 		ValidatorEpochLenSet(u64),
@@ -1463,6 +1497,28 @@ pub mod pallet {
 			Self::deposit_event( Event::ValidatorExcludeQuantileSet( validator_exclude_quantile ));
 			Ok(())
 		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_validator_prune_len( 
+			origin:OriginFor<T>, 
+			validator_prune_len: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+		    ValidatorPruneLen::<T>::set( validator_prune_len );
+			Self::deposit_event( Event::ValidatorPruneLenSet( validator_prune_len ));
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_validator_logits_divergence( 
+			origin:OriginFor<T>, 
+			validator_logits_divergence: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+		    ValidatorLogitsDivergence::<T>::set( validator_logits_divergence );
+			Self::deposit_event( Event::ValidatorLogitsDivergenceSet( validator_logits_divergence ));
+			Ok(())
+		}
 	}
 
 	// ---- Subtensor helper functions.
@@ -1612,6 +1668,20 @@ pub mod pallet {
 		}
 		pub fn set_validator_exclude_quantile( validator_exclude_quantile: u8 ) {
 			ValidatorExcludeQuantile::<T>::put( validator_exclude_quantile );
+		}
+
+		pub fn get_validator_prune_len( ) -> u64 {
+			return ValidatorPruneLen::<T>::get();
+		}
+		pub fn set_validator_prune_len( validator_prune_len: u64 ) {
+			ValidatorPruneLen::<T>::put( validator_prune_len );
+		}
+
+		pub fn get_validator_logits_divergence( ) -> u64 {
+			return ValidatorLogitsDivergence::<T>::get();
+		}
+		pub fn set_validator_logits_divergence( validator_logits_divergence: u64 ) {
+			ValidatorLogitsDivergence::<T>::put( validator_logits_divergence );
 		}
 
 		// -- Get step consensus shift (1/kappa)

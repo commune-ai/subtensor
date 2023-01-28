@@ -264,6 +264,24 @@ fn test_sudo_validator_exclude_quantile() {
     });
 }
 
+#[test]
+fn test_sudo_validator_prune_len() {
+	new_test_ext().execute_with(|| {
+        let validator_prune_len: u64 = 10;
+		assert_ok!(Subtensor::sudo_set_validator_prune_len(<<Test as Config>::Origin>::root(), validator_prune_len));
+        assert_eq!(Subtensor::get_validator_prune_len(), validator_prune_len);
+    });
+}
+
+#[test]
+fn test_sudo_validator_logits_divergence() {
+	new_test_ext().execute_with(|| {
+        let validator_logits_divergence: u64 = 10;
+		assert_ok!(Subtensor::sudo_set_validator_logits_divergence(<<Test as Config>::Origin>::root(), validator_logits_divergence));
+        assert_eq!(Subtensor::get_validator_logits_divergence(), validator_logits_divergence);
+    });
+}
+
 
 //#########################
 //## sudo failure tests ###
@@ -490,6 +508,26 @@ fn test_fails_sudo_validator_exclude_quantile() {
         let init_validator_exclude_quantile: u8 = Subtensor::get_validator_exclude_quantile();
 		assert_eq!(Subtensor::sudo_set_validator_exclude_quantile(<<Test as Config>::Origin>::signed(0), validator_exclude_quantile),  Err(DispatchError::BadOrigin.into()));
         assert_eq!(Subtensor::get_validator_exclude_quantile(), init_validator_exclude_quantile);
+    });
+}
+
+#[test]
+fn test_fails_sudo_validator_prune_len() {
+	new_test_ext().execute_with(|| {
+        let validator_prune_len: u64 = 10;
+        let init_validator_prune_len: u64 = Subtensor::get_validator_prune_len();
+		assert_eq!(Subtensor::sudo_set_validator_prune_len(<<Test as Config>::Origin>::signed(0), validator_prune_len),  Err(DispatchError::BadOrigin.into()));
+        assert_eq!(Subtensor::get_validator_prune_len(), init_validator_prune_len);
+    });
+}
+
+#[test]
+fn test_fails_sudo_validator_logits_divergence() {
+	new_test_ext().execute_with(|| {
+        let validator_logits_divergence: u64 = 10;
+        let init_validator_logits_divergence: u64 = Subtensor::get_validator_logits_divergence();
+		assert_eq!(Subtensor::sudo_set_validator_logits_divergence(<<Test as Config>::Origin>::signed(0), validator_logits_divergence),  Err(DispatchError::BadOrigin.into()));
+        assert_eq!(Subtensor::get_validator_logits_divergence(), init_validator_logits_divergence);
     });
 }
 
